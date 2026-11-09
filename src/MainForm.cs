@@ -262,6 +262,26 @@ public sealed class MainForm : Form
         return (dmg, hp, coin);
     }
 
+    private bool _permissionHintShown;
+
+    /// <summary>被沙箱 / 受限令牌启动时，给一次明确提示。</summary>
+    private void HintPermission(Exception ex)
+    {
+        if (ex is not UnauthorizedAccessException && ex is not IOException) return;
+        if (_permissionHintShown) return;
+        _permissionHintShown = true;
+        BeginInvoke(new Action(() =>
+            MessageBox.Show(
+                "没有写入权限。\n\n" +
+                "可能是程序被以受限权限启动（例如从聊天窗口的文件卡片直接打开），\n" +
+                "或游戏/Steam 以管理员身份运行。\n\n" +
+                "解决办法：\n" +
+                "1) 把 ICEY_Tuner.exe 复制到桌面等普通文件夹，直接双击运行；\n" +
+                "2) 或右键 → 以管理员身份运行；\n" +
+                "3) 不要通过聊天窗口的文件卡片启动本程序。",
+                "权限不足", MessageBoxButtons.OK, MessageBoxIcon.Warning)));
+    }
+
     private bool ApplyFiles(float dmg, int hp, int coin)
     {
         bool ok = true;
@@ -274,6 +294,7 @@ public sealed class MainForm : Form
         {
             ok = false;
             Log("✘ 伤害写入失败：" + ex.Message);
+            HintPermission(ex);
         }
 
         if (_save == null)
@@ -291,6 +312,7 @@ public sealed class MainForm : Form
         {
             ok = false;
             Log("✘ 存档写入失败：" + ex.Message);
+            HintPermission(ex);
         }
         return ok;
     }
