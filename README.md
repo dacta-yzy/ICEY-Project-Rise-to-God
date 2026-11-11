@@ -175,4 +175,13 @@ dotnet publish -c Release -r win-x64 --self-contained true `
 
 ## License
 
-MIT
+本项目采用 [**PolyForm Noncommercial License 1.0.0**](LICENSE) 发布。
+
+- ✅ 允许：非商业目的的使用、修改、分发
+- ❌ 禁止：任何商业用途
+- 📌 要求：分发时必须保留版权声明与协议全文
+
+完整条款见 [LICENSE](LICENSE)，或访问
+<https://polyformproject.org/licenses/noncommercial/1.0.0>。
+
+Copyright (c) 2026 dacta-yzy
