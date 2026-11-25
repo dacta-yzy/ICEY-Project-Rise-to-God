@@ -21,7 +21,8 @@
 
 | 版本 | 文件 | 说明 |
 |---|---|---|
-| **v1.3.0 未签名版** | [`release/ICEY_Tuner_v1.3.0_unsigned.zip`](release/ICEY_Tuner_v1.3.0_unsigned.zip) | 运行时绘制背景，无任何图片素材 |
+| **v1.3.1 未签名版** | [`release/ICEY_Tuner_v1.3.1_unsigned.zip`](release/ICEY_Tuner_v1.3.1_unsigned.zip) | 科技字标水印，无任何图片素材 |
+| v1.3.0 未签名版 | [`release/ICEY_Tuner_v1.3.0_unsigned.zip`](release/ICEY_Tuner_v1.3.0_unsigned.zip) | 运行时绘制背景 |
 | v1.2.0 未签名版 | [`release/ICEY_Tuner_v1.2.0_unsigned.zip`](release/ICEY_Tuner_v1.2.0_unsigned.zip) | 青黑主题 |
 | v1.1.0 未签名版 | [`release/ICEY_Tuner_v1.1.0_unsigned.zip`](release/ICEY_Tuner_v1.1.0_unsigned.zip) | 猩红主题 |
 | v1.0.0 未签名版 | [`release/ICEY_Tuner_v1.0.0_unsigned.zip`](release/ICEY_Tuner_v1.0.0_unsigned.zip) | 旧界面 |
@@ -31,6 +32,13 @@
 > 仓库与 Release **均不附带任何截图或图片**，仅提供 zip。界面外观请直接运行程序查看。
 
 ### 更新日志
+
+**v1.3.1**
+
+- 背景水印从「攻」字改为**几何科技字标**：9 组粗笔画构成的徽记，
+  白色笔芯 + 三层青色荧光叠加，带横向扫描缺口
+- 字标移到「修改记录」卡片背后，只露出空白区域，不再压住按钮
+- 卡片透明度下调到 178，水印能透出来但正文仍然清晰
 
 **v1.3.0**
 

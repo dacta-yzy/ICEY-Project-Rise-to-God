@@ -54,8 +54,8 @@ internal static class Backdrop
             for (int y = 0; y < h; y += 44) g.DrawLine(grid, 0, y, w, y);
         }
 
-        // 巨幅「攻」字水印
-        DrawGlyph(g, "攻", new RectangleF(w * 0.50f, h * 0.40f, w * 0.56f, h * 0.56f), Color.FromArgb(22, 235, 250));
+        // 右侧科技字标水印（几何笔画 + 荧光）
+        DrawEmblem(g, new RectangleF(w * 0.50f, h * 0.635f, w * 0.45f, w * 0.265f), 150);
         // ICEY 字样
         DrawWordmark(g, "ICEY", new RectangleF(-w * 0.03f, h * 0.62f, w * 0.55f, h * 0.42f), Color.FromArgb(13, 120, 220, 232));
 
@@ -138,25 +138,67 @@ internal static class Backdrop
         g.FillPath(pgb, path);
     }
 
-    private static void DrawGlyph(Graphics g, string text, RectangleF box, Color color)
+    /// <summary>
+    /// 科技字标：若干组粗笔画构成的几何徽记，白色笔芯 + 青色荧光叠加。
+    /// 坐标在 10x6 的归一化网格里定义，按目标矩形缩放。
+    /// </summary>
+    private static readonly (float X, float Y)[][] GlyphStrokes =
     {
-        Font font;
-        try { font = new Font("SimHei", 240f, FontStyle.Bold, GraphicsUnit.Pixel); }
-        catch { font = new Font("Microsoft YaHei UI", 240f, FontStyle.Bold, GraphicsUnit.Pixel); }
+        // 左上：横 + 竖 + 斜
+        new[] { (0.55f, 1.15f), (2.35f, 1.15f) },
+        new[] { (0.55f, 1.15f), (0.55f, 3.05f) },
+        new[] { (0.55f, 3.05f), (1.95f, 4.45f) },
+        // 中部：大 X
+        new[] { (2.95f, 0.95f), (4.95f, 4.55f) },
+        new[] { (4.95f, 0.95f), (2.95f, 4.55f) },
+        // 右部：竖 + 上斜 + 右下横 + 短竖
+        new[] { (5.85f, 0.85f), (5.85f, 4.65f) },
+        new[] { (5.85f, 2.85f), (7.35f, 1.45f) },
+        new[] { (6.35f, 4.85f), (7.85f, 4.85f) },
+        new[] { (8.55f, 4.85f), (8.55f, 3.35f) },
+    };
 
-        using (font)
-        using (var fmt = new StringFormat
-        {
-            Alignment = StringAlignment.Center,
-            LineAlignment = StringAlignment.Center,
-        })
-        {
-            // 轻微重影，做出全息偏移感
-            using (var ghost = new SolidBrush(Color.FromArgb(Math.Min(255, color.A / 2), 80, 200, 220)))
-                g.DrawString(text, font, ghost, new RectangleF(box.X + 10, box.Y + 8, box.Width, box.Height), fmt);
+    private static void DrawEmblem(Graphics g, RectangleF box, int alpha)
+    {
+        float sx = box.Width / 10f;
+        float sy = box.Height / 6f;
+        float thick = Math.Max(2f, Math.Min(sx, sy) * 0.62f);
 
-            using var b = new SolidBrush(color);
-            g.DrawString(text, font, b, box, fmt);
+        PointF P((float x, float y) p) => new(box.X + p.x * sx, box.Y + p.y * sy);
+
+        using var glowCyan = new Pen(Color.FromArgb(alpha / 4, 47, 230, 238), 1f)
+        {
+            LineJoin = LineJoin.Round,
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+        };
+        using var core = new Pen(Color.FromArgb(alpha, 234, 249, 252), 1f)
+        {
+            LineJoin = LineJoin.Miter,
+            StartCap = LineCap.Flat,
+            EndCap = LineCap.Flat,
+            MiterLimit = 3f,
+        };
+
+        // 由外到内叠加三层荧光，再压白色笔芯
+        foreach (var (widthScale, a) in new[] { (2.9f, alpha / 5), (1.9f, alpha / 3), (1.35f, alpha / 2) })
+        {
+            using var pen = (Pen)glowCyan.Clone();
+            pen.Width = thick * widthScale;
+            pen.Color = Color.FromArgb(a, 47, 230, 238);
+            foreach (var s in GlyphStrokes)
+                g.DrawLines(pen, s.Select(P).ToArray());
+        }
+
+        core.Width = thick;
+        foreach (var s in GlyphStrokes)
+            g.DrawLines(core, s.Select(P).ToArray());
+
+        // 横向扫描缺口，做出故障感
+        using (var cut = new SolidBrush(Color.FromArgb(alpha / 2, 8, 14, 16)))
+        {
+            g.FillRectangle(cut, box.X + box.Width * 0.02f, box.Y + box.Height * 0.47f, box.Width * 0.30f, thick * 0.30f);
+            g.FillRectangle(cut, box.X + box.Width * 0.58f, box.Y + box.Height * 0.60f, box.Width * 0.26f, thick * 0.24f);
         }
     }
 
