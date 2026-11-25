@@ -21,7 +21,8 @@
 
 | 版本 | 文件 | 说明 |
 |---|---|---|
-| **v1.3.1 未签名版** | [`release/ICEY_Tuner_v1.3.1_unsigned.zip`](release/ICEY_Tuner_v1.3.1_unsigned.zip) | 科技字标水印，无任何图片素材 |
+| **v1.3.2 未签名版** | [`release/ICEY_Tuner_v1.3.2_unsigned.zip`](release/ICEY_Tuner_v1.3.2_unsigned.zip) | ICEY 艺术字水印，无任何图片素材 |
+| v1.3.1 未签名版 | [`release/ICEY_Tuner_v1.3.1_unsigned.zip`](release/ICEY_Tuner_v1.3.1_unsigned.zip) | 几何徽记水印 |
 | v1.3.0 未签名版 | [`release/ICEY_Tuner_v1.3.0_unsigned.zip`](release/ICEY_Tuner_v1.3.0_unsigned.zip) | 运行时绘制背景 |
 | v1.2.0 未签名版 | [`release/ICEY_Tuner_v1.2.0_unsigned.zip`](release/ICEY_Tuner_v1.2.0_unsigned.zip) | 青黑主题 |
 | v1.1.0 未签名版 | [`release/ICEY_Tuner_v1.1.0_unsigned.zip`](release/ICEY_Tuner_v1.1.0_unsigned.zip) | 猩红主题 |
@@ -32,6 +33,12 @@
 > 仓库与 Release **均不附带任何截图或图片**，仅提供 zip。界面外观请直接运行程序查看。
 
 ### 更新日志
+
+**v1.3.2**
+
+- 背景水印改为 **ICEY 艺术字**：I / C / E / Y 四个字母用粗笔画绘制，
+  两端带下划线与青色方块标记，白色笔芯 + 三层青色荧光
+- 保持可读性：字母独立排布，不会被误认成抽象图形
 
 **v1.3.1**
 

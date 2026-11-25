@@ -55,7 +55,7 @@ internal static class Backdrop
         }
 
         // 右侧科技字标水印（几何笔画 + 荧光）
-        DrawEmblem(g, new RectangleF(w * 0.50f, h * 0.635f, w * 0.45f, w * 0.265f), 150);
+        DrawEmblem(g, new RectangleF(w * 0.50f, h * 0.655f, w * 0.42f, w * 0.14f), 190);
         // ICEY 字样
         DrawWordmark(g, "ICEY", new RectangleF(-w * 0.03f, h * 0.62f, w * 0.55f, h * 0.42f), Color.FromArgb(13, 120, 220, 232));
 
@@ -139,66 +139,76 @@ internal static class Backdrop
     }
 
     /// <summary>
-    /// 科技字标：若干组粗笔画构成的几何徽记，白色笔芯 + 青色荧光叠加。
-    /// 坐标在 10x6 的归一化网格里定义，按目标矩形缩放。
+    /// “ICEY” 艺术字标：用粗笔画拼出 I / C / E / Y 并加两端下划线，
+    /// 白色笔芯 + 三层青色荧光。坐标在「字高 = 1」的归一化空间里。
     /// </summary>
-    private static readonly (float X, float Y)[][] GlyphStrokes =
+    private static readonly (float X, float Y)[][] WordStrokes =
     {
-        // 左上：横 + 竖 + 斜
-        new[] { (0.55f, 1.15f), (2.35f, 1.15f) },
-        new[] { (0.55f, 1.15f), (0.55f, 3.05f) },
-        new[] { (0.55f, 3.05f), (1.95f, 4.45f) },
-        // 中部：大 X
-        new[] { (2.95f, 0.95f), (4.95f, 4.55f) },
-        new[] { (4.95f, 0.95f), (2.95f, 4.55f) },
-        // 右部：竖 + 上斜 + 右下横 + 短竖
-        new[] { (5.85f, 0.85f), (5.85f, 4.65f) },
-        new[] { (5.85f, 2.85f), (7.35f, 1.45f) },
-        new[] { (6.35f, 4.85f), (7.85f, 4.85f) },
-        new[] { (8.55f, 4.85f), (8.55f, 3.35f) },
+        // _ 左
+        new[] { (-0.42f, 0.94f), (-0.08f, 0.94f) },
+        // I
+        new[] { (0.10f, 0.00f), (0.10f, 1.00f) },
+        // C
+        new[] { (1.10f, 0.00f), (0.50f, 0.00f), (0.50f, 1.00f), (1.10f, 1.00f) },
+        // E
+        new[] { (1.34f, 0.00f), (1.34f, 1.00f) },
+        new[] { (1.34f, 0.00f), (1.90f, 0.00f) },
+        new[] { (1.34f, 0.50f), (1.78f, 0.50f) },
+        new[] { (1.34f, 1.00f), (1.90f, 1.00f) },
+        // Y
+        new[] { (2.08f, 0.00f), (2.42f, 0.46f) },
+        new[] { (2.76f, 0.00f), (2.42f, 0.46f) },
+        new[] { (2.42f, 0.46f), (2.42f, 1.00f) },
+        // _ 右
+        new[] { (2.94f, 0.94f), (3.28f, 0.94f) },
     };
+
+    private const float WordMinX = -0.42f;
+    private const float WordMaxX = 3.28f;
 
     private static void DrawEmblem(Graphics g, RectangleF box, int alpha)
     {
-        float sx = box.Width / 10f;
-        float sy = box.Height / 6f;
-        float thick = Math.Max(2f, Math.Min(sx, sy) * 0.62f);
+        float scale = box.Width / (WordMaxX - WordMinX);
+        float thick = Math.Max(2f, scale * 0.19f);
 
-        PointF P((float x, float y) p) => new(box.X + p.x * sx, box.Y + p.y * sy);
+        PointF P((float x, float y) p) =>
+            new(box.X + (p.x - WordMinX) * scale, box.Y + p.y * scale);
 
-        using var glowCyan = new Pen(Color.FromArgb(alpha / 4, 47, 230, 238), 1f)
-        {
-            LineJoin = LineJoin.Round,
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round,
-        };
-        using var core = new Pen(Color.FromArgb(alpha, 234, 249, 252), 1f)
+        using var core = new Pen(Color.FromArgb(alpha, 234, 249, 252), thick)
         {
             LineJoin = LineJoin.Miter,
             StartCap = LineCap.Flat,
             EndCap = LineCap.Flat,
-            MiterLimit = 3f,
+            MiterLimit = 2f,
         };
 
-        // 由外到内叠加三层荧光，再压白色笔芯
-        foreach (var (widthScale, a) in new[] { (2.9f, alpha / 5), (1.9f, alpha / 3), (1.35f, alpha / 2) })
+        // 三层荧光（由外到内）
+        foreach (var (widthScale, a) in new[] { (2.6f, alpha / 5), (1.7f, alpha / 3), (1.25f, alpha / 2) })
         {
-            using var pen = (Pen)glowCyan.Clone();
+            using var pen = (Pen)core.Clone();
             pen.Width = thick * widthScale;
             pen.Color = Color.FromArgb(a, 47, 230, 238);
-            foreach (var s in GlyphStrokes)
+            pen.LineJoin = LineJoin.Round;
+            foreach (var s in WordStrokes)
                 g.DrawLines(pen, s.Select(P).ToArray());
         }
 
-        core.Width = thick;
-        foreach (var s in GlyphStrokes)
+        foreach (var s in WordStrokes)
             g.DrawLines(core, s.Select(P).ToArray());
 
-        // 横向扫描缺口，做出故障感
-        using (var cut = new SolidBrush(Color.FromArgb(alpha / 2, 8, 14, 16)))
+        // 两个青色小方块（对应参考图里的方块标记）
+        using (var dot = new SolidBrush(Color.FromArgb(Math.Min(255, alpha + 40), 47, 230, 238)))
         {
-            g.FillRectangle(cut, box.X + box.Width * 0.02f, box.Y + box.Height * 0.47f, box.Width * 0.30f, thick * 0.30f);
-            g.FillRectangle(cut, box.X + box.Width * 0.58f, box.Y + box.Height * 0.60f, box.Width * 0.26f, thick * 0.24f);
+            float d = thick * 0.62f;
+            g.FillRectangle(dot, P((-0.25f, 0.66f)).X, P((-0.25f, 0.66f)).Y, d, d);
+            g.FillRectangle(dot, P((3.12f, 0.66f)).X, P((3.12f, 0.66f)).Y, d, d);
+        }
+
+        // 横向扫描缺口
+        using (var cut = new SolidBrush(Color.FromArgb(alpha / 3, 8, 14, 16)))
+        {
+            g.FillRectangle(cut, box.X + box.Width * 0.06f, box.Y + scale * 0.62f, box.Width * 0.22f, thick * 0.28f);
+            g.FillRectangle(cut, box.X + box.Width * 0.70f, box.Y + scale * 0.30f, box.Width * 0.18f, thick * 0.24f);
         }
     }
 
