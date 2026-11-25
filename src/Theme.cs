@@ -56,4 +56,19 @@ internal static class Theme
         using var p = new Pen(color, width);
         g.DrawPath(p, path);
     }
+
+    /// <summary>读取内嵌的字标位图（Assets/glyph.png）。</summary>
+    public static Image? LoadGlyph()
+    {
+        var asm = System.Reflection.Assembly.GetExecutingAssembly();
+        foreach (var name in asm.GetManifestResourceNames())
+        {
+            if (!name.EndsWith("glyph.png", StringComparison.OrdinalIgnoreCase)) continue;
+            using var s = asm.GetManifestResourceStream(name);
+            if (s == null) continue;
+            using var tmp = Image.FromStream(s);
+            return new Bitmap(tmp);
+        }
+        return null;
+    }
 }

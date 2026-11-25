@@ -21,7 +21,8 @@
 
 | 版本 | 文件 | 说明 |
 |---|---|---|
-| **v1.3.2 未签名版** | [`release/ICEY_Tuner_v1.3.2_unsigned.zip`](release/ICEY_Tuner_v1.3.2_unsigned.zip) | ICEY 艺术字水印，无任何图片素材 |
+| **v1.3.3 未签名版** | [`release/ICEY_Tuner_v1.3.3_unsigned.zip`](release/ICEY_Tuner_v1.3.3_unsigned.zip) | 参考图字标（抠图），无荧光 |
+| v1.3.2 未签名版 | [`release/ICEY_Tuner_v1.3.2_unsigned.zip`](release/ICEY_Tuner_v1.3.2_unsigned.zip) | ICEY 艺术字水印 |
 | v1.3.1 未签名版 | [`release/ICEY_Tuner_v1.3.1_unsigned.zip`](release/ICEY_Tuner_v1.3.1_unsigned.zip) | 几何徽记水印 |
 | v1.3.0 未签名版 | [`release/ICEY_Tuner_v1.3.0_unsigned.zip`](release/ICEY_Tuner_v1.3.0_unsigned.zip) | 运行时绘制背景 |
 | v1.2.0 未签名版 | [`release/ICEY_Tuner_v1.2.0_unsigned.zip`](release/ICEY_Tuner_v1.2.0_unsigned.zip) | 青黑主题 |
@@ -33,6 +34,15 @@
 > 仓库与 Release **均不附带任何截图或图片**，仅提供 zip。界面外观请直接运行程序查看。
 
 ### 更新日志
+
+**v1.3.3**
+
+- 背景水印改用**参考图字标抠图**：按亮度 + 饱和度阈值分离白色笔画，
+  输出透明底 PNG（192×103），去掉青色辉光，仅保留白色形状
+- 字标以资源形式嵌入 exe，按窗口宽度等比缩放，整体不透明度 165
+- 抠图脚本见 `src/tools/cut_glyph.py`，阈值可自行调整
+
+> ⚠️ 该字标来源于《ICEY》官方美术素材，仅作个人使用。再分发前请自行评估版权风险。
 
 **v1.3.2**
 

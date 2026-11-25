@@ -55,7 +55,7 @@ internal static class Backdrop
         }
 
         // 右侧科技字标水印（几何笔画 + 荧光）
-        DrawEmblem(g, new RectangleF(w * 0.50f, h * 0.655f, w * 0.42f, w * 0.14f), 190);
+        DrawEmblem(g, new RectangleF(w * 0.50f, h * 0.655f, w * 0.42f, w * 0.24f), 165);
         // ICEY 字样
         DrawWordmark(g, "ICEY", new RectangleF(-w * 0.03f, h * 0.62f, w * 0.55f, h * 0.42f), Color.FromArgb(13, 120, 220, 232));
 
@@ -166,50 +166,26 @@ internal static class Backdrop
     private const float WordMinX = -0.42f;
     private const float WordMaxX = 3.28f;
 
+    private static readonly Lazy<Image?> Glyph = new(Theme.LoadGlyph);
+
     private static void DrawEmblem(Graphics g, RectangleF box, int alpha)
     {
-        float scale = box.Width / (WordMaxX - WordMinX);
-        float thick = Math.Max(2f, scale * 0.19f);
+        var img = Glyph.Value;
+        if (img == null) return;
 
-        PointF P((float x, float y) p) =>
-            new(box.X + (p.x - WordMinX) * scale, box.Y + p.y * scale);
+        // 等比缩放到 box 宽度，垂直居中
+        float scale = box.Width / img.Width;
+        float w = box.Width;
+        float h = img.Height * scale;
+        var dest = new RectangleF(box.X, box.Y + (box.Height - h) / 2f, w, h);
 
-        using var core = new Pen(Color.FromArgb(alpha, 234, 249, 252), thick)
-        {
-            LineJoin = LineJoin.Miter,
-            StartCap = LineCap.Flat,
-            EndCap = LineCap.Flat,
-            MiterLimit = 2f,
-        };
+        using var ia = new System.Drawing.Imaging.ImageAttributes();
+        ia.SetColorMatrix(new System.Drawing.Imaging.ColorMatrix { Matrix33 = alpha / 255f });
 
-        // 三层荧光（由外到内）
-        foreach (var (widthScale, a) in new[] { (2.6f, alpha / 5), (1.7f, alpha / 3), (1.25f, alpha / 2) })
-        {
-            using var pen = (Pen)core.Clone();
-            pen.Width = thick * widthScale;
-            pen.Color = Color.FromArgb(a, 47, 230, 238);
-            pen.LineJoin = LineJoin.Round;
-            foreach (var s in WordStrokes)
-                g.DrawLines(pen, s.Select(P).ToArray());
-        }
-
-        foreach (var s in WordStrokes)
-            g.DrawLines(core, s.Select(P).ToArray());
-
-        // 两个青色小方块（对应参考图里的方块标记）
-        using (var dot = new SolidBrush(Color.FromArgb(Math.Min(255, alpha + 40), 47, 230, 238)))
-        {
-            float d = thick * 0.62f;
-            g.FillRectangle(dot, P((-0.25f, 0.66f)).X, P((-0.25f, 0.66f)).Y, d, d);
-            g.FillRectangle(dot, P((3.12f, 0.66f)).X, P((3.12f, 0.66f)).Y, d, d);
-        }
-
-        // 横向扫描缺口
-        using (var cut = new SolidBrush(Color.FromArgb(alpha / 3, 8, 14, 16)))
-        {
-            g.FillRectangle(cut, box.X + box.Width * 0.06f, box.Y + scale * 0.62f, box.Width * 0.22f, thick * 0.28f);
-            g.FillRectangle(cut, box.X + box.Width * 0.70f, box.Y + scale * 0.30f, box.Width * 0.18f, thick * 0.24f);
-        }
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.DrawImage(img, Rectangle.Round(dest), 0, 0, img.Width, img.Height,
+            GraphicsUnit.Pixel, ia);
     }
 
     private static void DrawWordmark(Graphics g, string text, RectangleF box, Color color)
