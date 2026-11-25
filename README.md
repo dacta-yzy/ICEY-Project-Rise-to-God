@@ -22,12 +22,20 @@
 
 | 版本 | 文件 | 说明 |
 |---|---|---|
-| **v1.1.0 未签名版** | [`release/ICEY_Tuner_v1.1.0_unsigned.zip`](release/ICEY_Tuner_v1.1.0_unsigned.zip) | 深色主题 + 伤害上限开关，**无数字签名** |
+| **v1.2.0 未签名版** | [`release/ICEY_Tuner_v1.2.0_unsigned.zip`](release/ICEY_Tuner_v1.2.0_unsigned.zip) | 青黑主题 + 伤害上限开关，**无数字签名** |
+| v1.1.0 未签名版 | [`release/ICEY_Tuner_v1.1.0_unsigned.zip`](release/ICEY_Tuner_v1.1.0_unsigned.zip) | 猩红主题 |
 | v1.0.0 未签名版 | [`release/ICEY_Tuner_v1.0.0_unsigned.zip`](release/ICEY_Tuner_v1.0.0_unsigned.zip) | 旧界面 |
 
 解压后双击 `ICEY_Tuner.exe`。
 
 ### 更新日志
+
+**v1.2.0**
+
+- 主题改为青黑 / 亮青：配色从一张 ICEY 风格参考图中提取关键色后重制，
+  **不使用该图片本身**，背景与图标仍为程序化绘制的原创图形
+- 主色 `#080D0E` / `#12262A` / `#144E54`，强调色 `#2FE6EE`，文字 `#D5DAE0`
+- 移除标题下方会压住副标题的装饰线
 
 **v1.1.0**
 

@@ -38,7 +38,7 @@ internal sealed class NeonButton : Control
 
         if (Primary)
         {
-            using var lg = new LinearGradientBrush(r, Theme.Crimson, Theme.CrimsonDeep, 90f);
+            using var lg = new LinearGradientBrush(r, Color.FromArgb(31, 195, 209), Theme.AccentDeep, 90f);
             using var path = Theme.Round(r, 6);
             g.FillPath(lg, path);
             if (_hover)
@@ -46,13 +46,13 @@ internal sealed class NeonButton : Control
                 using var glow = new SolidBrush(Color.FromArgb(48, 255, 255, 255));
                 g.FillPath(glow, path);
             }
-            using var p = new Pen(Color.FromArgb(_hover ? 220 : 140, 255, 120, 140), 1f);
+            using var p = new Pen(Color.FromArgb(_hover ? 230 : 150, 120, 245, 250), 1f);
             g.DrawPath(p, path);
         }
         else
         {
             Theme.FillRound(g, r, 6, _hover ? Color.FromArgb(120, 24, 24, 34) : Color.FromArgb(90, 16, 16, 22));
-            Theme.StrokeRound(g, r, 6, _hover ? Color.FromArgb(190, 255, 60, 90) : Color.FromArgb(70, 220, 225, 240), 1f);
+            Theme.StrokeRound(g, r, 6, _hover ? Color.FromArgb(200, 90, 235, 245) : Color.FromArgb(70, 190, 225, 235), 1f);
         }
 
         var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding;
@@ -93,7 +93,7 @@ internal sealed class ToggleSwitch : Control
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
         var track = new Rectangle(1, 4, Width - 3, Height - 9);
-        var trackColor = _on ? Theme.Crimson : Color.FromArgb(255, 62, 62, 78);
+        var trackColor = _on ? Theme.Accent : Color.FromArgb(255, 62, 62, 78);
         using (var path = Theme.Round(track, track.Height / 2))
         using (var b = new SolidBrush(trackColor))
             g.FillPath(b, path);
@@ -143,7 +143,7 @@ internal sealed class Card : Panel
         Theme.FillRound(g, r, 10, Theme.Card);
         Theme.StrokeRound(g, r, 10, Theme.CardBorder, 1f);
 
-        using (var accent = new SolidBrush(Theme.Crimson))
+        using (var accent = new SolidBrush(Theme.Accent))
             g.FillRectangle(accent, 18, 16, 3, 12);
 
         TextRenderer.DrawText(g, Title, Theme.CardTitle, new Point(28, 14), Theme.Ink,
@@ -202,7 +202,7 @@ internal sealed class FieldBox : Panel
         g.SmoothingMode = SmoothingMode.AntiAlias;
         var r = new Rectangle(0, 0, Width - 1, Height - 1);
         Theme.FillRound(g, r, 6, Theme.Field);
-        Theme.StrokeRound(g, r, 6, _focus ? Theme.Crimson : Theme.FieldBorder, _focus ? 1.6f : 1f);
+        Theme.StrokeRound(g, r, 6, _focus ? Theme.Accent : Theme.FieldBorder, _focus ? 1.6f : 1f);
     }
 }
 

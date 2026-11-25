@@ -45,7 +45,7 @@ public sealed class MainForm : Form
                 DwmSetWindowAttribute(Handle, 19, ref on, sizeof(int));
 
             // 标题栏染成深色（Win11 22H2+）
-            int caption = 0x00141014;
+            int caption = 0x00170F0A;
             DwmSetWindowAttribute(Handle, 35, ref caption, sizeof(int));
             int captionText = 0x00F0F0F0;
             DwmSetWindowAttribute(Handle, 36, ref captionText, sizeof(int));
@@ -223,7 +223,7 @@ public sealed class MainForm : Form
         // 标题
         TextRenderer.DrawText(g, "ICEY TUNER", Theme.Title, new Point(Pad - 2, 12), Theme.Ink,
             TextFormatFlags.NoPadding);
-        using (var b = new SolidBrush(Theme.Crimson))
+        using (var b = new SolidBrush(Theme.Accent))
             g.FillRectangle(b, Pad, 64, 54, 3);
 
         TextRenderer.DrawText(g, "伤害 · 生命上限 · 金币 · 伤害上限", Theme.Subtitle, new Point(Pad, 74),
