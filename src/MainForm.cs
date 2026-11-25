@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.Text.Json.Nodes;
 using IceyTuner.Core;
 
@@ -6,265 +8,306 @@ namespace IceyTuner;
 
 public sealed class MainForm : Form
 {
-    private readonly TextBox _txtDmg = new();
-    private readonly TextBox _txtHp = new();
-    private readonly TextBox _txtCoin = new();
-    private readonly RichTextBox _log = new();
-    private readonly Label _lblGame = new();
-    private readonly Label _lblSave = new();
-    private readonly Label _lblProc = new();
+    private readonly FieldBox _fDmg = new("10");
+    private readonly FieldBox _fHp = new("2000");
+    private readonly FieldBox _fCoin = new("99999");
+    private readonly ToggleSwitch _tglCap = new();
+    private readonly HistoryView _history = new();
     private readonly System.Windows.Forms.Timer _timer = new();
+
+    private readonly Card _cardEnv = new() { Title = "环境检测" };
+    private readonly Card _cardVal = new() { Title = "数值设置" };
+    private readonly Card _cardLog = new() { Title = "修改记录" };
 
     private string? _gameDir;
     private string? _savePath;
     private DllPatcher? _dll;
     private SaveFile? _save;
+    private Image? _bg;
 
-    private const int Pad = 18;
+    private string _statusText = "未运行";
+    private Color _statusColor = Theme.Dim;
+    private bool _permissionHintShown;
+    private bool _initializing = true;
+
+    private const int Pad = 28;
+
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        try
+        {
+            int on = 1;
+            if (DwmSetWindowAttribute(Handle, 20, ref on, sizeof(int)) != 0)
+                DwmSetWindowAttribute(Handle, 19, ref on, sizeof(int));
+
+            // 标题栏染成深色（Win11 22H2+）
+            int caption = 0x00141014;
+            DwmSetWindowAttribute(Handle, 35, ref caption, sizeof(int));
+            int captionText = 0x00F0F0F0;
+            DwmSetWindowAttribute(Handle, 36, ref captionText, sizeof(int));
+        }
+        catch { }
+    }
 
     public MainForm()
     {
-        Text = "ICEY Tuner — 伤害 / 生命 / 金币 一键修改";
+        Text = "ICEY Tuner — 伤害 / 生命 / 金币";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(830, 700);
-        MinimumSize = new Size(800, 640);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = Color.FromArgb(250, 250, 252);
+        FormBorderStyle = FormBorderStyle.FixedSingle;
+        MaximizeBox = false;
+        ClientSize = new Size(900, 812);
+        Font = Theme.Body;
+        BackColor = Color.FromArgb(10, 10, 14);
         DoubleBuffered = true;
         AutoScaleMode = AutoScaleMode.Dpi;
+
+        try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+        _bg = Theme.LoadBackground();
 
         BuildUi();
         Detect();
 
         _timer.Interval = 1500;
-        _timer.Tick += (_, _) => UpdateProcLabel();
+        _timer.Tick += (_, _) => UpdateStatus();
         _timer.Start();
     }
 
+    // ------------------------------------------------------------------ 布局
     private void BuildUi()
     {
-        int contentWidth = ClientSize.Width - Pad * 2;
+        int w = ClientSize.Width - Pad * 2;
 
-        var title = new Label
-        {
-            Text = "ICEY Tuner",
-            Font = new Font("Microsoft YaHei UI", 17F, FontStyle.Bold),
-            AutoSize = true,
-            Location = new Point(Pad - 2, 12),
-        };
-        var sub = new Label
-        {
-            Text = "伤害 · 生命上限 · 金币",
-            ForeColor = Color.FromArgb(135, 135, 145),
-            AutoSize = true,
-            Location = new Point(Pad + 214, 36),
-        };
-        _lblProc.Text = "● 未运行";
-        _lblProc.ForeColor = Color.Gray;
-        _lblProc.AutoSize = true;
-        _lblProc.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        _lblProc.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
-        _lblProc.Location = new Point(ClientSize.Width - 120, 30);
+        // 环境检测
+        _cardEnv.SetBounds(Pad, 112, w, 88);
+        _cardEnv.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        Controls.Add(_cardEnv);
 
-        Controls.AddRange(new Control[] { title, sub, _lblProc });
+        _lblGame = MakeLabel("", Theme.Small, Theme.Muted);
+        _lblGame.Location = new Point(18, 44);
+        _cardEnv.Controls.Add(_lblGame);
 
-        // ---- 环境检测 ----
-        var gbEnv = new GroupBox
+        _lblSave = MakeLabel("", Theme.Small, Theme.Muted);
+        _lblSave.Location = new Point(18, 64);
+        _cardEnv.Controls.Add(_lblSave);
+
+        // 数值设置
+        _cardVal.SetBounds(Pad, 212, w, 232);
+        _cardVal.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        Controls.Add(_cardVal);
+
+        AddRow(_cardVal, 0, "伤害倍率", _fDmg, "1 = 原版，建议 2 ~ 20");
+        AddRow(_cardVal, 1, "生命上限", _fHp, "游戏原值 200");
+        AddRow(_cardVal, 2, "金币数量", _fCoin, "商店消费用");
+
+        var divider = new Panel
         {
-            Text = " 环境检测 ",
-            Location = new Point(Pad, 64),
-            Size = new Size(contentWidth, 92),
+            BackColor = Color.FromArgb(40, 255, 255, 255),
+            Location = new Point(18, 180),
+            Size = new Size(w - 36, 1),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
         };
-        _lblGame.Text = "游戏目录：检测中…";
-        _lblGame.AutoSize = true;
-        _lblGame.Location = new Point(16, 30);
-        _lblSave.Text = "存档文件：检测中…";
-        _lblSave.AutoSize = true;
-        _lblSave.Location = new Point(16, 58);
-        gbEnv.Controls.AddRange(new Control[] { _lblGame, _lblSave });
-        Controls.Add(gbEnv);
+        _cardVal.Controls.Add(divider);
 
-        // ---- 数值设置 ----
-        var gbVal = new GroupBox
-        {
-            Text = " 数值设置 ",
-            Location = new Point(Pad, 166),
-            Size = new Size(contentWidth, 174),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-        };
-        AddRow(gbVal, 0, "伤害倍率", _txtDmg, "1 = 原始，建议 2~20", "10");
-        AddRow(gbVal, 1, "生命上限", _txtHp, "游戏原值 200", "2000");
-        AddRow(gbVal, 2, "金币数量", _txtCoin, "商店消费用", "99999");
-        Controls.Add(gbVal);
+        var capLabel = MakeLabel("解除 999 伤害上限", Theme.Body, Theme.Ink);
+        capLabel.Location = new Point(18, 198);
+        _cardVal.Controls.Add(capLabel);
 
-        // ---- 按钮 ----
-        var flow = new FlowLayoutPanel
+        _tglCap.Location = new Point(198, 192);
+        _tglCap.CheckedChanged += (_, _) =>
         {
-            Location = new Point(Pad, 348),
-            Size = new Size(contentWidth, 42),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            WrapContents = false,
+            if (_initializing) return;
+            Note(_tglCap.Checked ? "伤害上限：解除（999 → 999999）" : "伤害上限：恢复 999", Theme.Warn);
         };
-        flow.Controls.Add(MakeButton("应用并启动游戏", true, (_, _) => OnLaunch()));
-        flow.Controls.Add(MakeButton("仅应用（下次启动生效）", false, (_, _) => OnApply()));
-        flow.Controls.Add(MakeButton("立即内存注入", false, (_, _) => OnInject()));
-        flow.Controls.Add(MakeButton("还原备份", false, (_, _) => OnRestore()));
-        Controls.Add(flow);
+        _cardVal.Controls.Add(_tglCap);
 
-        // ---- 日志 ----
-        var gbLog = new GroupBox
-        {
-            Text = " 日志 ",
-            Location = new Point(Pad, 400),
-            Size = new Size(contentWidth, ClientSize.Height - 400 - Pad),
-            Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-        };
-        _log.Multiline = true;
-        _log.ReadOnly = true;
-        _log.ScrollBars = RichTextBoxScrollBars.Vertical;
-        _log.BackColor = Color.FromArgb(252, 252, 253);
-        _log.Font = new Font("Consolas", 9F);
-        _log.BorderStyle = BorderStyle.None;
-        _log.Dock = DockStyle.Fill;
-        gbLog.Controls.Add(_log);
-        Controls.Add(gbLog);
+        var capHint = MakeLabel("开启后单次伤害不再被截断", Theme.Small, Theme.Dim);
+        capHint.Location = new Point(270, 198);
+        _cardVal.Controls.Add(capHint);
+
+        // 按钮
+        _btnLaunch = new NeonButton("应用并启动游戏", true) { Location = new Point(Pad, 460), Size = new Size(200, 42) };
+        _btnLaunch.Click += (_, _) => OnLaunch();
+
+        _btnApply = new NeonButton("仅应用（下次生效）", false) { Location = new Point(Pad + 212, 460), Size = new Size(200, 42) };
+        _btnApply.Click += (_, _) => OnApply();
+
+        _btnInject = new NeonButton("立即内存注入", false) { Location = new Point(Pad + 424, 460), Size = new Size(170, 42) };
+        _btnInject.Click += (_, _) => OnInject();
+
+        _btnRestore = new NeonButton("还原备份", false) { Location = new Point(Pad + 606, 460), Size = new Size(140, 42) };
+        _btnRestore.Click += (_, _) => OnRestore();
+
+        Controls.AddRange(new Control[] { _btnLaunch, _btnApply, _btnInject, _btnRestore });
+
+        // 修改记录
+        _cardLog.SetBounds(Pad, 518, w, 266);
+        _cardLog.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        Controls.Add(_cardLog);
+
+        _history.Location = new Point(18, 44);
+        _history.Size = new Size(w - 40, 206);
+        _history.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+        _cardLog.Controls.Add(_history);
     }
 
-    private static Button MakeButton(string text, bool primary, EventHandler onClick)
+    private static Label MakeLabel(string text, Font font, Color color) => new()
     {
-        var b = new Button
-        {
-            Text = text,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(14, 6, 14, 6),
-            Margin = new Padding(0, 0, 10, 0),
-            FlatStyle = FlatStyle.System,
-            Font = new Font("Microsoft YaHei UI", 9F, primary ? FontStyle.Bold : FontStyle.Regular),
-        };
-        b.Click += onClick;
-        return b;
-    }
+        Text = text,
+        AutoSize = true,
+        Font = font,
+        ForeColor = color,
+        BackColor = Color.Transparent,
+    };
 
-    private static void AddRow(Control parent, int row, string label, TextBox box,
-                               string hint, string def)
+    private void AddRow(Card card, int index, string label, FieldBox field, string hint)
     {
-        int y = 32 + row * 44;
-        parent.Controls.Add(new Label
+        int y = 44 + index * 46;
+
+        card.Controls.Add(new Label
         {
             Text = label,
             AutoSize = true,
-            Location = new Point(18, y + 5),
+            Font = Theme.Body,
+            ForeColor = Theme.Ink,
+            BackColor = Color.Transparent,
+            Location = new Point(18, y + 8),
         });
 
-        box.Text = def;
-        box.Location = new Point(110, y);
-        box.Size = new Size(150, 28);
-        box.BorderStyle = BorderStyle.FixedSingle;
-        box.Font = new Font("Consolas", 11F);
-        box.TextAlign = HorizontalAlignment.Left;
-        parent.Controls.Add(box);
+        field.Location = new Point(118, y);
+        field.Size = new Size(170, 38);
+        card.Controls.Add(field);
 
-        parent.Controls.Add(new Label
+        card.Controls.Add(new Label
         {
             Text = hint,
             AutoSize = true,
-            ForeColor = Color.FromArgb(145, 145, 155),
-            Location = new Point(280, y + 5),
+            Font = Theme.Small,
+            ForeColor = Theme.Dim,
+            BackColor = Color.Transparent,
+            Location = new Point(306, y + 10),
         });
     }
+
+    private Label _lblGame = new();
+    private Label _lblSave = new();
+    private NeonButton _btnLaunch = null!;
+    private NeonButton _btnApply = null!;
+    private NeonButton _btnInject = null!;
+    private NeonButton _btnRestore = null!;
+
+    // ------------------------------------------------------------------ 绘制
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        if (_bg != null)
+            g.DrawImage(_bg, new Rectangle(0, 0, ClientSize.Width, ClientSize.Height));
+        else
+            g.Clear(Color.FromArgb(12, 12, 18));
+
+        using var shade = new SolidBrush(Color.FromArgb(120, 0, 0, 0));
+        g.FillRectangle(shade, ClientRectangle);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+        // 标题
+        TextRenderer.DrawText(g, "ICEY TUNER", Theme.Title, new Point(Pad - 2, 12), Theme.Ink,
+            TextFormatFlags.NoPadding);
+        using (var b = new SolidBrush(Theme.Crimson))
+            g.FillRectangle(b, Pad, 64, 54, 3);
+
+        TextRenderer.DrawText(g, "伤害 · 生命上限 · 金币 · 伤害上限", Theme.Subtitle, new Point(Pad, 74),
+            Theme.Muted, TextFormatFlags.NoPadding);
+
+        // 状态
+        var size = TextRenderer.MeasureText(_statusText, Theme.Body, new Size(400, 24), TextFormatFlags.NoPadding);
+        int right = ClientSize.Width - Pad;
+        TextRenderer.DrawText(g, _statusText, Theme.Body,
+            new Rectangle(right - size.Width, 34, size.Width, 24), _statusColor,
+            TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+        using (var dot = new SolidBrush(_statusColor))
+            g.FillEllipse(dot, right - size.Width - 16, 42, 8, 8);
+    }
+
+    // ------------------------------------------------------------------ 逻辑
+    private void Note(string text, Color color) => _history.Add(text, color);
 
     private void Detect()
     {
         _gameDir = Paths.FindGameDir();
-        if (_gameDir != null)
-        {
-            _dll = new DllPatcher(_gameDir);
-            _savePath = Paths.FindSaveFile(_gameDir);
-            if (_savePath != null) _save = new SaveFile(_savePath);
-        }
-
         if (_gameDir == null)
         {
-            _lblGame.Text = "游戏目录：未找到（请确认 ICEY 已安装）";
-            _lblGame.ForeColor = Color.Firebrick;
+            _lblGame.Text = "游戏目录：未找到，请确认 ICEY 已安装";
+            _lblGame.ForeColor = Theme.Bad;
             _lblSave.Text = "存档文件：—";
-            _lblSave.ForeColor = Color.Firebrick;
-            Log("未找到游戏目录，请确认 Steam 库位置。");
+            _lblSave.ForeColor = Theme.Bad;
+            Note("未找到游戏目录", Theme.Bad);
             return;
         }
 
-        _lblGame.Text = "游戏目录：" + _gameDir;
-        _lblGame.ForeColor = Color.SeaGreen;
+        _dll = new DllPatcher(_gameDir);
+        _savePath = Paths.FindSaveFile(_gameDir);
+        if (_savePath != null) _save = new SaveFile(_savePath);
+
+        _lblGame.Text = "游戏目录： " + _gameDir;
+        _lblGame.ForeColor = Theme.Ok;
 
         if (_savePath != null)
         {
-            _lblSave.Text = "存档文件：" + _savePath;
-            _lblSave.ForeColor = Color.SeaGreen;
+            _lblSave.Text = "存档文件： " + _savePath;
+            _lblSave.ForeColor = Theme.Ok;
         }
         else
         {
-            _lblSave.Text = "存档文件：未找到（先运行一次游戏生成存档）";
-            _lblSave.ForeColor = Color.Firebrick;
+            _lblSave.Text = "存档文件：未找到，先运行一次游戏生成存档";
+            _lblSave.ForeColor = Theme.Bad;
         }
 
         try
         {
-            var m = _dll?.ReadMultiplier();
+            var m = _dll.ReadMultiplier();
             if (m.HasValue)
             {
-                _txtDmg.Text = m.Value.ToString("0.###");
-                Log($"当前 DLL 伤害倍率 = {m.Value:0.###}×");
+                _fDmg.Box.Text = m.Value.ToString("0.###");
+                Note($"读取当前伤害倍率 {m.Value:0.###}×", Theme.Muted);
+            }
+
+            var cap = _dll.ReadCap();
+            if (cap.HasValue)
+            {
+                _tglCap.Checked = cap.Value > DllPatcher.CapDefault + 1f;
+                Note(_tglCap.Checked ? "伤害上限：已解除" : "伤害上限：999（默认）", Theme.Muted);
             }
         }
         catch (Exception ex)
         {
-            Log("读取 DLL 失败：" + ex.Message);
+            Note("读取 DLL 失败：" + ex.Message, Theme.Bad);
         }
+
+        _initializing = false;
     }
 
-    private void UpdateProcLabel()
+    private void UpdateStatus()
     {
         int? pid = Native.FindPid();
-        if (pid.HasValue)
-        {
-            _lblProc.Text = $"● 运行中 (PID {pid})";
-            _lblProc.ForeColor = Color.SeaGreen;
-        }
-        else
-        {
-            _lblProc.Text = "● 未运行";
-            _lblProc.ForeColor = Color.Gray;
-        }
+        string text = pid.HasValue ? $"运行中 · PID {pid}" : "未运行";
+        Color color = pid.HasValue ? Theme.Ok : Theme.Dim;
+        if (text == _statusText && color == _statusColor) return;
+        _statusText = text;
+        _statusColor = color;
+        Invalidate(new Rectangle(ClientSize.Width - 268, 26, 250, 40));
     }
 
-    private void Log(string msg)
-    {
-        if (InvokeRequired)
-        {
-            BeginInvoke(new Action(() => Log(msg)));
-            return;
-        }
-        _log.AppendText($"[{DateTime.Now:HH:mm:ss}] {msg}{Environment.NewLine}");
-        _log.SelectionStart = _log.TextLength;
-        _log.ScrollToCaret();
-    }
-
-    private (float Dmg, int Hp, int Coin) ReadValues()
-    {
-        if (!float.TryParse(_txtDmg.Text, out var dmg) || dmg < 0.1f || dmg > 1000f)
-            throw new ArgumentException("伤害倍率需为 0.1 ~ 1000 的数字");
-        if (!int.TryParse(_txtHp.Text, out var hp) || hp < 1 || hp > 999999)
-            throw new ArgumentException("生命上限需为 1 ~ 999999 的整数");
-        if (!int.TryParse(_txtCoin.Text, out var coin) || coin < 0 || coin > 99999999)
-            throw new ArgumentException("金币需为 0 ~ 99999999 的整数");
-        return (dmg, hp, coin);
-    }
-
-    private bool _permissionHintShown;
-
-    /// <summary>被沙箱 / 受限令牌启动时，给一次明确提示。</summary>
     private void HintPermission(Exception ex)
     {
         if (ex is not UnauthorizedAccessException && ex is not IOException) return;
@@ -272,14 +315,21 @@ public sealed class MainForm : Form
         _permissionHintShown = true;
         BeginInvoke(new Action(() =>
             MessageBox.Show(
-                "没有写入权限。\n\n" +
-                "可能是程序被以受限权限启动（例如从聊天窗口的文件卡片直接打开），\n" +
-                "或游戏/Steam 以管理员身份运行。\n\n" +
-                "解决办法：\n" +
-                "1) 把 ICEY_Tuner.exe 复制到桌面等普通文件夹，直接双击运行；\n" +
-                "2) 或右键 → 以管理员身份运行；\n" +
-                "3) 不要通过聊天窗口的文件卡片启动本程序。",
+                "没有写入权限。\n\n可能是程序被以受限权限启动，或游戏/Steam 以管理员身份运行。\n\n" +
+                "解决办法：\n1) 把 ICEY_Tuner.exe 复制到桌面等普通文件夹，直接双击运行；\n" +
+                "2) 或右键 → 以管理员身份运行。",
                 "权限不足", MessageBoxButtons.OK, MessageBoxIcon.Warning)));
+    }
+
+    private (float Dmg, int Hp, int Coin) ReadValues()
+    {
+        if (!float.TryParse(_fDmg.Box.Text, out var dmg) || dmg < 0.1f || dmg > 1000f)
+            throw new ArgumentException("伤害倍率需为 0.1 ~ 1000 的数字");
+        if (!int.TryParse(_fHp.Box.Text, out var hp) || hp < 1 || hp > 999999)
+            throw new ArgumentException("生命上限需为 1 ~ 999999 的整数");
+        if (!int.TryParse(_fCoin.Box.Text, out var coin) || coin < 0 || coin > 99999999)
+            throw new ArgumentException("金币需为 0 ~ 99999999 的整数");
+        return (dmg, hp, coin);
     }
 
     private bool ApplyFiles(float dmg, int hp, int coin)
@@ -288,30 +338,41 @@ public sealed class MainForm : Form
         try
         {
             var real = _dll!.WriteMultiplier(dmg);
-            Log($"✔ 伤害倍率写入 {real:0.###}× → {_dll.DllPath}");
+            Note($"伤害倍率 → {real:0.###}×", Theme.Ok);
         }
         catch (Exception ex)
         {
             ok = false;
-            Log("✘ 伤害写入失败：" + ex.Message);
+            Note("伤害倍率写入失败：" + ex.Message, Theme.Bad);
             HintPermission(ex);
+        }
+
+        try
+        {
+            var cap = _dll!.WriteCap(_tglCap.Checked);
+            Note(cap > DllPatcher.CapDefault + 1f ? "伤害上限 → 999999" : "伤害上限 → 999", Theme.Ok);
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            Note("伤害上限写入失败：" + ex.Message, Theme.Bad);
         }
 
         if (_save == null)
         {
-            Log("! 未找到存档，生命/金币未写入");
+            Note("未找到存档，生命与金币未写入", Theme.Warn);
             return false;
         }
 
         try
         {
             _save.Write(maxHp: hp, coin: coin);
-            Log($"✔ 存档写入 maxHP={hp}, CoinNum={coin} → {Path.GetFileName(_save.FilePath)}");
+            Note($"生命上限 → {hp}，金币 → {coin}", Theme.Ok);
         }
         catch (Exception ex)
         {
             ok = false;
-            Log("✘ 存档写入失败：" + ex.Message);
+            Note("存档写入失败：" + ex.Message, Theme.Bad);
             HintPermission(ex);
         }
         return ok;
@@ -326,7 +387,7 @@ public sealed class MainForm : Form
         Task.Run(() =>
         {
             bool ok = ApplyFiles(v.dmg, v.hp, v.coin);
-            Log(ok ? "完成。" : "部分失败，见上。");
+            Note(ok ? "修改已写入，下次启动生效" : "部分修改失败，见上方记录", ok ? Theme.Ok : Theme.Warn);
         });
     }
 
@@ -342,8 +403,7 @@ public sealed class MainForm : Form
             return;
         }
 
-        var pid = Native.FindPid();
-        if (pid.HasValue)
+        if (Native.FindPid().HasValue)
         {
             var r = MessageBox.Show("ICEY 正在运行。要关闭它并重新启动以应用修改吗？\n（未保存的进度会丢失）",
                 "游戏已在运行", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -353,7 +413,7 @@ public sealed class MainForm : Form
                 foreach (var p in Process.GetProcessesByName("ICEY")) p.Kill(true);
                 Thread.Sleep(2000);
             }
-            catch { /* ignore */ }
+            catch { }
         }
 
         Task.Run(() =>
@@ -362,27 +422,26 @@ public sealed class MainForm : Form
 
             try
             {
-                var psi = new ProcessStartInfo(Path.Combine(_gameDir, Paths.GameExe))
+                Process.Start(new ProcessStartInfo(Path.Combine(_gameDir!, Paths.GameExe))
                 {
                     WorkingDirectory = _gameDir,
                     UseShellExecute = false,
-                };
-                Process.Start(psi);
-                Log("▶ 已启动 ICEY.exe");
+                });
+                Note("已启动 ICEY", Theme.Ok);
             }
             catch (Exception ex)
             {
-                Log("✘ 启动失败：" + ex.Message);
+                Note("启动失败：" + ex.Message, Theme.Bad);
                 return;
             }
 
-            WaitAndInject(v.hp, v.coin);
+            WaitAndInject(v.hp, v.coin, v.dmg);
         });
     }
 
-    private void WaitAndInject(int hp, int coin)
+    private void WaitAndInject(int hp, int coin, float dmg)
     {
-        Log("等待游戏进入可注入状态…");
+        Note("等待角色载入…", Theme.Muted);
         for (int i = 0; i < 120; i++)
         {
             Thread.Sleep(1000);
@@ -394,14 +453,13 @@ public sealed class MainForm : Form
                 var pa = mem.FindPlayerAttributes(hp);
                 if (pa.Count > 0)
                 {
-                    Log("✔ 已定位 PlayerAttribute，开始内存注入");
-                    WriteAll(mem, pa, hp, coin);
+                    WriteAll(mem, pa, hp, coin, dmg);
                     return;
                 }
             }
-            catch { /* 进程可能还没准备好 */ }
+            catch { }
         }
-        Log("（120 秒内未定位到角色对象；文件修改已生效，可在游戏内点『立即内存注入』）");
+        Note("120 秒内未定位到角色对象，文件修改已生效", Theme.Warn);
     }
 
     private void OnInject()
@@ -421,11 +479,12 @@ public sealed class MainForm : Form
         {
             try
             {
-                using var mem = new MemoryEngine(pid.Value);
-                Log("扫描内存中（约 5~20 秒）…");
+                try { _dll?.WriteCap(_tglCap.Checked); } catch { }
 
-                int saveHp = v.hp;
-                int saveCoin = v.coin;
+                using var mem = new MemoryEngine(pid.Value);
+                Note("正在扫描内存…", Theme.Muted);
+
+                int saveHp = v.hp, saveCoin = v.coin;
                 try
                 {
                     if (_save != null)
@@ -435,7 +494,7 @@ public sealed class MainForm : Form
                         saveCoin = scoin;
                     }
                 }
-                catch { /* ignore */ }
+                catch { }
 
                 var pa = mem.FindPlayerAttributes(saveHp);
                 if (pa.Count == 0) pa = mem.FindPlayerAttributes(v.hp);
@@ -443,28 +502,24 @@ public sealed class MainForm : Form
                 var eq = mem.FindEquipments(v.coin);
                 if (eq.Count == 0) eq = mem.FindEquipments(saveCoin);
 
-                Log($"PlayerAttribute 命中 {pa.Count} 个，Equipment 命中 {eq.Count} 个");
-
                 if (pa.Count == 0 && eq.Count == 0)
                 {
-                    Log("未找到角色对象：请确认已进入游戏（不是主菜单），或先让游戏自动存一次档再试。");
+                    Note("未找到角色对象，请确认已进入游戏", Theme.Warn);
                     return;
                 }
 
-                WriteAll(mem, pa, v.hp, v.coin, eq, v.dmg);
+                WriteAll(mem, pa, v.hp, v.coin, v.dmg, eq);
             }
             catch (Exception ex)
             {
-                Log("✘ 注入异常：" + ex.Message);
+                Note("注入异常：" + ex.Message, Theme.Bad);
             }
         });
     }
 
-    private void WriteAll(MemoryEngine mem, List<PlayerAttr> pa, int hp, int coin,
-                          List<EquipmentObj>? eq = null, float dmg = 0)
+    private void WriteAll(MemoryEngine mem, List<PlayerAttr> pa, int hp, int coin, float dmg,
+                          List<EquipmentObj>? eq = null)
     {
-        if (dmg <= 0)
-            float.TryParse(_txtDmg.Text, out dmg);
         int baseAtk = Math.Clamp((int)Math.Round(40 * dmg), 1, 99999);
 
         if (pa.Count > 0)
@@ -473,25 +528,24 @@ public sealed class MainForm : Form
             mem.WriteInt(obj + MemoryEngine.PaMaxHp, hp);
             mem.WriteInt(obj + MemoryEngine.PaCurHp, hp);
             mem.WriteInt(obj + MemoryEngine.PaBaseAtk, baseAtk);
-            Log($"✔ 内存写入 PlayerAttribute@0x{obj:X}: maxHP={hp}, currentHP={hp}, baseAtk={baseAtk}");
+            Note($"内存注入：生命 {hp}，攻击 {baseAtk}", Theme.Ok);
         }
 
         if (eq is { Count: > 0 })
         {
-            long obj = eq[0].Obj;
-            mem.WriteInt(obj + MemoryEngine.EqCoin, coin);
-            Log($"✔ 内存写入 Equipment@0x{obj:X}: CoinNum={coin}");
+            mem.WriteInt(eq[0].Obj + MemoryEngine.EqCoin, coin);
+            Note($"内存注入：金币 {coin}", Theme.Ok);
         }
         else if (_save != null)
         {
             try
             {
                 _save.Write(coin: coin);
-                Log($"✔ 未定位到 Equipment，已改存档：CoinNum={coin}（下次存档生效）");
+                Note($"金币已写入存档：{coin}", Theme.Ok);
             }
             catch (Exception ex)
             {
-                Log("✘ 金币写入失败：" + ex.Message);
+                Note("金币写入失败：" + ex.Message, Theme.Bad);
             }
         }
     }
@@ -503,8 +557,8 @@ public sealed class MainForm : Form
             return;
 
         int n = 0;
-        if (_dll != null && _dll.Restore()) { n++; Log("✔ DLL 已还原"); }
-        if (_save != null && _save.Restore()) { n++; Log("✔ 存档已还原"); }
-        if (n == 0) Log("没有找到备份文件");
+        if (_dll != null && _dll.Restore()) { n++; Note("DLL 已还原", Theme.Ok); }
+        if (_save != null && _save.Restore()) { n++; Note("存档已还原", Theme.Ok); }
+        if (n == 0) Note("没有找到备份文件", Theme.Warn);
     }
 }

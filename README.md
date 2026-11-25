@@ -22,9 +22,24 @@
 
 | 版本 | 文件 | 说明 |
 |---|---|---|
-| **未签名版** | [`release/ICEY_Tuner_v1.0.0_unsigned.zip`](release/ICEY_Tuner_v1.0.0_unsigned.zip) | 直接解压运行，**无数字签名** |
+| **v1.1.0 未签名版** | [`release/ICEY_Tuner_v1.1.0_unsigned.zip`](release/ICEY_Tuner_v1.1.0_unsigned.zip) | 深色主题 + 伤害上限开关，**无数字签名** |
+| v1.0.0 未签名版 | [`release/ICEY_Tuner_v1.0.0_unsigned.zip`](release/ICEY_Tuner_v1.0.0_unsigned.zip) | 旧界面 |
 
 解压后双击 `ICEY_Tuner.exe`。
+
+### 更新日志
+
+**v1.1.0**
+
+- 全新深色 / 猩红主题界面：卡片、按钮、开关、输入框全部自绘，带悬停与按下反馈
+- 内置原创背景图与程序图标（不打包任何游戏美术素材）
+- 「日志」改为「修改记录」，去掉时间戳，最新一条置顶
+- 新增「解除 999 伤害上限」开关：开启后 `GetFinalDamage()` 的上限改为 999999
+- 窗口标题栏随主题变暗
+
+**v1.0.0**
+
+- 首个版本：伤害倍率、生命上限、金币、启动时内存注入
 
 ### 运行要求
 
@@ -60,6 +75,7 @@
 | 伤害倍率 | 0.1 ~ 1000 | `Assembly-CSharp.dll` 中 `PlayerDamageCalculate.PlayerAtk()` 的倍率常量 |
 | 生命上限 | 1 ~ 999999 | 存档 `PlayerAttributeGameData.maxHP` + `currentHP` |
 | 金币数量 | 0 ~ 99999999 | 存档 `Equipment.CoinNum` |
+| 解除 999 伤害上限 | 开关 | `GetFinalDamage()` 末尾 `Mathf.Clamp(..., 0, 999)` 的 999 常量 |
 
 四个按钮：
 
@@ -69,6 +85,9 @@
 | **仅应用（下次启动生效）** | 只写文件 |
 | **立即内存注入** | 游戏已在运行时直接改进程内存（需角色已加载） |
 | **还原备份** | DLL / 存档恢复到首次修改前 |
+
+界面为深色 / 猩红主题，按钮、开关、卡片、输入框全部自绘；右下角是「修改记录」，
+只记录做了什么，不带时间戳。
 
 ---
 

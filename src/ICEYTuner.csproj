@@ -9,7 +9,8 @@
     <AssemblyName>ICEY_Tuner</AssemblyName>
     <RootNamespace>IceyTuner</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.0.0</Version>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Version>1.1.0</Version>
     <Authors>DSH</Authors>
     <Product>ICEY Tuner</Product>
     <AssemblyTitle>ICEY Tuner</AssemblyTitle>
@@ -19,6 +20,8 @@
   <ItemGroup>
     <Compile Remove="tests\**" />
     <None Remove="tests\**" />
+    <None Remove="Assets\**" />
+    <EmbeddedResource Include="Assets\bg.png" />
   </ItemGroup>
 
 </Project>
