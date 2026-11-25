@@ -11,10 +11,9 @@
 改**伤害倍率**、**生命上限**、**金币数量**，支持启动游戏时自动内存注入。
 
 - C# / .NET 8 / WinForms，无第三方依赖
-- 主程序 **148 KB**
+- 主程序 **160 KB**
 - 不修改游戏本体资源，只改 DLL 中的一个浮点常量 + 存档中的两个数字
-
-![界面](docs/screenshot.png)
+- 界面背景由代码实时绘制，**不含任何图片素材**
 
 ---
 
@@ -22,13 +21,24 @@
 
 | 版本 | 文件 | 说明 |
 |---|---|---|
-| **v1.2.0 未签名版** | [`release/ICEY_Tuner_v1.2.0_unsigned.zip`](release/ICEY_Tuner_v1.2.0_unsigned.zip) | 青黑主题 + 伤害上限开关，**无数字签名** |
+| **v1.3.0 未签名版** | [`release/ICEY_Tuner_v1.3.0_unsigned.zip`](release/ICEY_Tuner_v1.3.0_unsigned.zip) | 运行时绘制背景，无任何图片素材 |
+| v1.2.0 未签名版 | [`release/ICEY_Tuner_v1.2.0_unsigned.zip`](release/ICEY_Tuner_v1.2.0_unsigned.zip) | 青黑主题 |
 | v1.1.0 未签名版 | [`release/ICEY_Tuner_v1.1.0_unsigned.zip`](release/ICEY_Tuner_v1.1.0_unsigned.zip) | 猩红主题 |
 | v1.0.0 未签名版 | [`release/ICEY_Tuner_v1.0.0_unsigned.zip`](release/ICEY_Tuner_v1.0.0_unsigned.zip) | 旧界面 |
 
 解压后双击 `ICEY_Tuner.exe`。
 
+> 仓库与 Release **均不附带任何截图或图片**，仅提供 zip。界面外观请直接运行程序查看。
+
 ### 更新日志
+
+**v1.3.0**
+
+- 背景改为**运行时用 GDI+ 绘制**，删除 `Assets/bg.png`，仓库中不再有图片文件
+- 加入参考图的氛围元素：右侧巨幅「攻」字水印、左下斜切光带、HUD 刻度与四角框、
+  品红细线点缀、扫描线与暗角
+- 卡片改为半透明，背景水印可以透出，形成「全息投影在玻璃后」的层次
+- 包体从 390 KB 降到 ~200 KB
 
 **v1.2.0**
 

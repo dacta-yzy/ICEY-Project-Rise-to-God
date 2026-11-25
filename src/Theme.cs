@@ -16,7 +16,7 @@ internal static class Theme
     public static readonly Color Warn = Color.FromArgb(255, 192, 90);
     public static readonly Color Bad = Color.FromArgb(255, 110, 120);
 
-    public static readonly Color Card = Color.FromArgb(226, 10, 20, 23);
+    public static readonly Color Card = Color.FromArgb(206, 10, 20, 23);
     public static readonly Color CardBorder = Color.FromArgb(58, 80, 220, 235);
     public static readonly Color Field = Color.FromArgb(255, 17, 31, 35);
     public static readonly Color FieldBorder = Color.FromArgb(70, 210, 240, 245);
@@ -55,19 +55,5 @@ internal static class Theme
         using var path = Round(r, radius);
         using var p = new Pen(color, width);
         g.DrawPath(p, path);
-    }
-
-    public static Image? LoadBackground()
-    {
-        var asm = Assembly.GetExecutingAssembly();
-        foreach (var name in asm.GetManifestResourceNames())
-        {
-            if (!name.EndsWith("bg.png", StringComparison.OrdinalIgnoreCase)) continue;
-            using var s = asm.GetManifestResourceStream(name);
-            if (s == null) continue;
-            using var tmp = Image.FromStream(s);
-            return new Bitmap(tmp);
-        }
-        return null;
     }
 }

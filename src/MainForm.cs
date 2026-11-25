@@ -66,7 +66,7 @@ public sealed class MainForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
 
         try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
-        _bg = Theme.LoadBackground();
+        _bg = Backdrop.Render(ClientSize);
 
         BuildUi();
         Detect();
